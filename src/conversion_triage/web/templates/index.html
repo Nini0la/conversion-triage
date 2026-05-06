@@ -10,6 +10,10 @@
     <main class="container">
       <h1>Conversion Triage</h1>
       <p>Paste OCR/ASR text or provide a YouTube link to triage subtitles.</p>
+      <p class="note">
+        Note: YouTube import uses existing video subtitles only. It does not transcribe audio.
+        Import will fail when subtitles are unavailable.
+      </p>
 
       <form method="post" action="/triage" class="triage-form">
         <label for="source_type">Source Type</label>
@@ -28,11 +32,20 @@
           value="{{ youtube_url }}"
           placeholder="https://www.youtube.com/watch?v=..."
         />
+        <button type="submit" name="action" value="import_youtube">Import YouTube Subtitles</button>
 
         <label for="text">Text (optional if YouTube URL is provided)</label>
-        <textarea id="text" name="text" rows="12">{{ text }}</textarea>
+        <textarea
+          id="text"
+          name="text"
+          rows="12"
+          {% if imported_from_youtube %}readonly class="locked"{% endif %}
+        >{{ text }}</textarea>
+        {% if imported_from_youtube %}
+        <p class="note">Text was imported from YouTube subtitles and is read-only in this state.</p>
+        {% endif %}
 
-        <button type="submit">Run Triage</button>
+        <button type="submit" name="action" value="triage">Run Triage</button>
       </form>
 
       {% if error %}

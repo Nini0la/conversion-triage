@@ -55,6 +55,7 @@ def index(request: Request) -> HTMLResponse:
             "context": "",
             "result": None,
             "error": "",
+            "imported_from_youtube": False,
             "highlighted_text": "",
         },
     )
@@ -67,22 +68,34 @@ def triage_page(
     youtube_url: str = Form(default=""),
     source_type: str = Form(...),
     context: str = Form(default=""),
+    action: str = Form(default="triage"),
 ) -> HTMLResponse:
     working_text = text.strip()
     youtube_url = youtube_url.strip()
     error = ""
     result: TriageResult | None = None
+    imported_from_youtube = False
 
-    if youtube_url:
+    if action == "import_youtube":
+        if not youtube_url:
+            error = "Provide a YouTube URL to import subtitles."
+        else:
+            try:
+                working_text = fetch_youtube_text(url=youtube_url)
+                imported_from_youtube = True
+            except TranscriptProviderError as exc:
+                error = str(exc)
+    elif youtube_url:
         try:
             working_text = fetch_youtube_text(url=youtube_url)
+            imported_from_youtube = True
         except TranscriptProviderError as exc:
             error = str(exc)
 
-    if not error and not working_text:
+    if action == "triage" and not error and not working_text:
         error = "Provide text or a YouTube URL."
 
-    if not error:
+    if action == "triage" and not error:
         result = triage_text(text=working_text, source_type=source_type, context=context or None)
 
     return templates.TemplateResponse(
@@ -95,6 +108,7 @@ def triage_page(
             "context": context,
             "result": result,
             "error": error,
+            "imported_from_youtube": imported_from_youtube,
             "highlighted_text": render_highlighted_text(working_text, result)
             if result is not None
             else "",

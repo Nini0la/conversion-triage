@@ -9,6 +9,8 @@
   --critical: #d1495b;
   --error-bg: #fff3e8;
   --error-fg: #9c2f00;
+  --note-bg: #eef7f5;
+  --note-fg: #154a44;
 }
 
 * {
@@ -72,6 +74,20 @@ button:hover {
   background: #f9fafb;
   padding: 0.9rem;
   border-radius: 10px;
+}
+
+.note {
+  margin: 0.2rem 0 0.8rem;
+  background: var(--note-bg);
+  color: var(--note-fg);
+  border: 1px solid #b8ddd6;
+  border-radius: 8px;
+  padding: 0.7rem;
+}
+
+.locked {
+  background: #f3f4f6;
+  color: #374151;
 }
 
 .error {

@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from urllib.parse import parse_qs, urlparse
 
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import (
+    CouldNotRetrieveTranscript,
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    YouTubeTranscriptApi,
+)
 
 from conversion_triage.transcripts.base import TranscriptProvider, TranscriptProviderError
 
@@ -44,7 +50,7 @@ def extract_video_id(url: str) -> str:
 
 def _normalize_segments(segments: object) -> str:
     text_parts: list[str] = []
-    if not isinstance(segments, list):
+    if not isinstance(segments, Iterable):
         return ""
 
     for segment in segments:
@@ -64,15 +70,27 @@ class YouTubeTranscriptProvider(TranscriptProvider):
 
     def __init__(self, *, languages: list[str] | None = None) -> None:
         self.languages = languages or ["en"]
+        self.client = YouTubeTranscriptApi()
 
     def fetch_text(self, *, url: str) -> str:
         video_id = extract_video_id(url)
         try:
-            segments = YouTubeTranscriptApi.get_transcript(video_id, languages=self.languages)
+            segments = self.client.fetch(video_id, languages=self.languages)
+        except (TranscriptsDisabled, NoTranscriptFound):
+            raise TranscriptProviderError(
+                "No YouTube subtitles found for this video. We only import existing subtitles; "
+                "we do not transcribe audio."
+            ) from None
+        except CouldNotRetrieveTranscript as exc:
+            raise TranscriptProviderError(
+                f"Failed to fetch YouTube subtitles: {exc}. We only import existing subtitles."
+            ) from exc
         except Exception as exc:  # pragma: no cover - external errors vary by environment
             raise TranscriptProviderError(f"Failed to fetch YouTube transcript: {exc}") from exc
 
         text = _normalize_segments(segments)
         if not text:
-            raise TranscriptProviderError("Transcript was fetched but empty.")
+            raise TranscriptProviderError(
+                "YouTube subtitles were fetched but empty. We only import existing subtitles."
+            )
         return text

@@ -91,6 +91,7 @@ def test_web_route_can_use_youtube_transcript_source(monkeypatch) -> None:
             "youtube_url": "https://youtu.be/dQw4w9WgXcQ",
             "source_type": "asr",
             "context": "youtube video",
+            "action": "triage",
         },
     )
 
@@ -102,3 +103,34 @@ def test_web_route_can_use_youtube_transcript_source(monkeypatch) -> None:
         "context": "youtube video",
     }
     assert "for all intensive purposes" in response.text
+
+
+def test_web_import_button_fetches_without_running_triage(monkeypatch) -> None:
+    app = create_app()
+    client = TestClient(app)
+
+    def fake_fetch_youtube_text(*, url: str) -> str:
+        assert url == "https://youtu.be/dQw4w9WgXcQ"
+        return "imported subtitle text"
+
+    def fail_triage_text(*, text: str, source_type: str, context: str | None, llm_adapter=None):
+        _ = (text, source_type, context, llm_adapter)
+        raise AssertionError("triage_text should not be called during import action")
+
+    monkeypatch.setattr("conversion_triage.web.routes.fetch_youtube_text", fake_fetch_youtube_text)
+    monkeypatch.setattr("conversion_triage.web.routes.triage_text", fail_triage_text)
+
+    response = client.post(
+        "/triage",
+        data={
+            "text": "",
+            "youtube_url": "https://youtu.be/dQw4w9WgXcQ",
+            "source_type": "asr",
+            "context": "youtube video",
+            "action": "import_youtube",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "imported subtitle text" in response.text
+    assert 'readonly class="locked"' in response.text
