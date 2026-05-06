@@ -7,6 +7,8 @@
   --minor: #f2cc8f;
   --major: #f7a072;
   --critical: #d1495b;
+  --error-bg: #fff3e8;
+  --error-fg: #9c2f00;
 }
 
 * {
@@ -70,6 +72,15 @@ button:hover {
   background: #f9fafb;
   padding: 0.9rem;
   border-radius: 10px;
+}
+
+.error {
+  margin: 1rem 0;
+  background: var(--error-bg);
+  color: var(--error-fg);
+  border: 1px solid #f3c6a6;
+  border-radius: 8px;
+  padding: 0.8rem;
 }
 
 .flag {

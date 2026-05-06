@@ -5,7 +5,7 @@ import json
 import sys
 from typing import Any
 
-from conversion_triage.engine import triage_text
+from conversion_triage.engine import fetch_youtube_text, triage_text
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -15,6 +15,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-type", choices=["asr", "ocr"], required=True)
     parser.add_argument("--context", default=None)
     parser.add_argument("--text", default=None, help="Input text. If omitted, stdin is used.")
+    parser.add_argument(
+        "--youtube-url",
+        default=None,
+        help="Optional YouTube URL to pull subtitles from before triage.",
+    )
     return parser
 
 
@@ -22,9 +27,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    text = args.text if args.text is not None else sys.stdin.read()
+    if args.youtube_url:
+        text = fetch_youtube_text(url=args.youtube_url)
+    else:
+        text = args.text if args.text is not None else sys.stdin.read()
+
     if not text.strip():
-        parser.error("No input text provided. Use --text or pipe input via stdin.")
+        parser.error("No input text provided. Use --text, --youtube-url, or pipe stdin.")
 
     result = triage_text(text=text, source_type=args.source_type, context=args.context)
     payload: dict[str, Any] = result.model_dump(mode="json")

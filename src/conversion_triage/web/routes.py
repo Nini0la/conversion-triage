@@ -7,7 +7,8 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from conversion_triage.engine import TriageResult, triage_text
+from conversion_triage.engine import TriageResult, fetch_youtube_text, triage_text
+from conversion_triage.transcripts import TranscriptProviderError
 
 router = APIRouter()
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -49,9 +50,11 @@ def index(request: Request) -> HTMLResponse:
         "index.html",
         {
             "text": "",
+            "youtube_url": "",
             "source_type": "asr",
             "context": "",
             "result": None,
+            "error": "",
             "highlighted_text": "",
         },
     )
@@ -60,19 +63,40 @@ def index(request: Request) -> HTMLResponse:
 @router.post("/triage", response_class=HTMLResponse)
 def triage_page(
     request: Request,
-    text: str = Form(...),
+    text: str = Form(default=""),
+    youtube_url: str = Form(default=""),
     source_type: str = Form(...),
     context: str = Form(default=""),
 ) -> HTMLResponse:
-    result = triage_text(text=text, source_type=source_type, context=context or None)
+    working_text = text.strip()
+    youtube_url = youtube_url.strip()
+    error = ""
+    result: TriageResult | None = None
+
+    if youtube_url:
+        try:
+            working_text = fetch_youtube_text(url=youtube_url)
+        except TranscriptProviderError as exc:
+            error = str(exc)
+
+    if not error and not working_text:
+        error = "Provide text or a YouTube URL."
+
+    if not error:
+        result = triage_text(text=working_text, source_type=source_type, context=context or None)
+
     return templates.TemplateResponse(
         request,
         "index.html",
         {
-            "text": text,
+            "text": working_text,
+            "youtube_url": youtube_url,
             "source_type": source_type,
             "context": context,
             "result": result,
-            "highlighted_text": render_highlighted_text(text, result),
+            "error": error,
+            "highlighted_text": render_highlighted_text(working_text, result)
+            if result is not None
+            else "",
         },
     )

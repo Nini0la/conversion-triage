@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from conversion_triage.engine import Flag, FlagCategory, Severity, triage_text
+from conversion_triage.engine import Flag, FlagCategory, Severity, triage_text, triage_youtube_url
 from conversion_triage.engine.llm import LLMAdapter
 from conversion_triage.engine.schemas import SourceType
 
@@ -22,6 +22,15 @@ class DummyAdapter:
                 confidence=0.51,
             )
         ]
+
+
+class DummyTranscriptProvider:
+    def __init__(self) -> None:
+        self.seen_url: str | None = None
+
+    def fetch_text(self, *, url: str) -> str:
+        self.seen_url = url
+        return "for all intensive purposes we shipped on 32/13/2026"
 
 
 def test_engine_flags_rule_issues_without_web_app() -> None:
@@ -46,3 +55,17 @@ def test_engine_supports_optional_llm_adapter() -> None:
     result = triage_text(text=text, source_type="asr", context="weekly update", llm_adapter=adapter)
 
     assert any(flag.reason.startswith("Model suspects") for flag in result.flags)
+
+
+def test_engine_can_triage_from_youtube_provider() -> None:
+    provider = DummyTranscriptProvider()
+
+    result = triage_youtube_url(
+        url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        source_type="asr",
+        context="video transcript",
+        transcript_provider=provider,
+    )
+
+    assert provider.seen_url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    assert any(flag.category.value == "asr_confusion" for flag in result.flags)

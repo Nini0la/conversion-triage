@@ -18,7 +18,7 @@ uv sync --group dev
 ## Run Tests
 
 ```bash
-uv run pytest
+uv run python -m pytest
 ```
 
 ## Run Lint
@@ -42,6 +42,18 @@ for flag in result.flags:
     print(flag.category, flag.severity, flag.reason)
 ```
 
+You can also triage directly from a YouTube subtitle source:
+
+```python
+from conversion_triage.engine import triage_youtube_url
+
+result = triage_youtube_url(
+    url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    source_type="asr",
+    context="video transcript",
+)
+```
+
 ## CLI Usage
 
 ```bash
@@ -49,10 +61,11 @@ uv run conversion-triage --source-type asr --context "meeting transcript" \
   --text "for all intensive purposes we shipped on 32/13/2026"
 ```
 
-You can also read from stdin:
+Or with YouTube subtitles:
 
 ```bash
-echo "This is rnore text with 1l and 0CR noise" | uv run conversion-triage --source-type ocr
+uv run conversion-triage --source-type asr \
+  --youtube-url "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 ## Run Web App
@@ -61,7 +74,7 @@ echo "This is rnore text with 1l and 0CR noise" | uv run conversion-triage --sou
 uv run uvicorn conversion_triage.web.app:create_app --factory --reload
 ```
 
-Open http://127.0.0.1:8000 and paste text to review flagged spans.
+Open http://127.0.0.1:8000 and either paste text or provide a YouTube link.
 
 ## Project Layout
 
@@ -75,6 +88,10 @@ src/conversion_triage/
 │   ├── chunking.py
 │   ├── merge.py
 │   └── llm.py
+├── transcripts/
+│   ├── __init__.py
+│   ├── base.py
+│   └── youtube.py
 ├── web/
 │   ├── app.py
 │   ├── routes.py

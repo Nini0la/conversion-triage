@@ -9,7 +9,7 @@
   <body>
     <main class="container">
       <h1>Conversion Triage</h1>
-      <p>Paste OCR/ASR text and review likely issues.</p>
+      <p>Paste OCR/ASR text or provide a YouTube link to triage subtitles.</p>
 
       <form method="post" action="/triage" class="triage-form">
         <label for="source_type">Source Type</label>
@@ -21,11 +21,25 @@
         <label for="context">Context</label>
         <input id="context" name="context" value="{{ context }}" placeholder="meeting transcript" />
 
-        <label for="text">Text</label>
-        <textarea id="text" name="text" rows="12" required>{{ text }}</textarea>
+        <label for="youtube_url">YouTube URL (optional)</label>
+        <input
+          id="youtube_url"
+          name="youtube_url"
+          value="{{ youtube_url }}"
+          placeholder="https://www.youtube.com/watch?v=..."
+        />
+
+        <label for="text">Text (optional if YouTube URL is provided)</label>
+        <textarea id="text" name="text" rows="12">{{ text }}</textarea>
 
         <button type="submit">Run Triage</button>
       </form>
+
+      {% if error %}
+      <section class="results">
+        <p class="error">{{ error }}</p>
+      </section>
+      {% endif %}
 
       {% if result %}
       <section class="results">
