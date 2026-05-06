@@ -1,0 +1,98 @@
+:root {
+  --bg: #f8f5f0;
+  --paper: #ffffff;
+  --ink: #1f2933;
+  --muted: #52606d;
+  --accent: #124e66;
+  --minor: #f2cc8f;
+  --major: #f7a072;
+  --critical: #d1495b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 0% 0%, #f4e3d7 0%, transparent 35%),
+    radial-gradient(circle at 100% 100%, #d6e6f2 0%, transparent 40%),
+    var(--bg);
+}
+
+.container {
+  max-width: 960px;
+  margin: 2rem auto;
+  background: var(--paper);
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 7%);
+}
+
+h1,
+h2 {
+  margin-top: 0;
+  font-family: "Space Grotesk", "Avenir Next", sans-serif;
+}
+
+.triage-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  padding: 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #bcccdc;
+}
+
+button {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+.highlighted {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  background: #f9fafb;
+  padding: 0.9rem;
+  border-radius: 10px;
+}
+
+.flag {
+  padding: 0 0.12rem;
+  border-radius: 0.2rem;
+}
+
+.flag.minor {
+  background: var(--minor);
+}
+
+.flag.major {
+  background: var(--major);
+}
+
+.flag.critical {
+  background: var(--critical);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+}
