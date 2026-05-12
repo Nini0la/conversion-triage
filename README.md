@@ -42,6 +42,28 @@ for flag in result.flags:
     print(flag.category, flag.severity, flag.reason)
 ```
 
+## Multi-LLM Routing (any-llm)
+
+Use Mozilla's `any-llm` router through the built-in adapter to switch providers/models
+without changing engine code:
+
+```python
+from conversion_triage.engine import AnyLLMMultiPassAdapter, AnyLLMSettings, triage_text
+
+adapter = AnyLLMMultiPassAdapter(
+    AnyLLMSettings(provider="openai", model="gpt-4o-mini")
+)
+
+result = triage_text(
+    text="for all intensive purposes, we shipped yesterday.",
+    source_type="asr",
+    context="meeting transcript",
+    llm_adapter=adapter,
+)
+```
+
+Set provider API keys via environment variables required by your selected any-llm provider.
+
 You can also triage directly from a YouTube subtitle source:
 
 ```python

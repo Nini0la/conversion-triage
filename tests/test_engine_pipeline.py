@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from conversion_triage.engine import Flag, FlagCategory, Severity, triage_text, triage_youtube_url
-from conversion_triage.engine.llm import LLMAdapter
+from conversion_triage.engine.chunking import TextChunk
+from conversion_triage.engine.llm import LLMAdapter, LLMContextMap
 from conversion_triage.engine.schemas import SourceType
 
 
@@ -31,6 +32,65 @@ class DummyTranscriptProvider:
     def fetch_text(self, *, url: str) -> str:
         self.seen_url = url
         return "for all intensive purposes we shipped on 32/13/2026"
+
+
+class MultiPassDummyAdapter:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def summarize_document(
+        self,
+        *,
+        text: str,
+        source_type: SourceType,
+        context: str | None,
+        chunks: list[TextChunk],
+    ) -> LLMContextMap:
+        _ = (source_type, context, chunks)
+        self.calls.append("summarize")
+        return LLMContextMap(summary=f"summary:{len(text)}")
+
+    def triage_chunk(
+        self,
+        *,
+        chunk: TextChunk,
+        chunk_index: int,
+        total_chunks: int,
+        source_type: SourceType,
+        context: str | None,
+        context_map: LLMContextMap,
+    ) -> list[Flag]:
+        _ = (chunk_index, total_chunks, source_type, context, context_map)
+        self.calls.append(f"chunk:{chunk.text.strip()}")
+        if "intensive purposes" not in chunk.text:
+            return []
+        start = chunk.start + chunk.text.lower().index("intensive")
+        end = start + len("intensive")
+        return [
+            Flag(
+                start=start,
+                end=end,
+                text="intensive",
+                severity=Severity.MAJOR,
+                category=FlagCategory.ASR_CONFUSION,
+                reason="Likely wrong word in phrase.",
+                suggestion="intents",
+                confidence=0.9,
+            )
+        ]
+
+    def triage_cross_chunk(
+        self,
+        *,
+        text: str,
+        chunks: list[TextChunk],
+        source_type: SourceType,
+        context: str | None,
+        context_map: LLMContextMap,
+    ) -> list[Flag]:
+        _ = (text, chunks, source_type, context, context_map)
+        self.calls.append("cross")
+        return []
 
 
 def test_engine_flags_rule_issues_without_web_app() -> None:
@@ -69,3 +129,20 @@ def test_engine_can_triage_from_youtube_provider() -> None:
 
     assert provider.seen_url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     assert any(flag.category.value == "asr_confusion" for flag in result.flags)
+
+
+def test_engine_runs_multi_pass_llm_flow_when_supported() -> None:
+    text = "for all intensive purposes we shipped."
+    adapter = MultiPassDummyAdapter()
+
+    result = triage_text(
+        text=text,
+        source_type="asr",
+        context="meeting transcript",
+        llm_adapter=adapter,
+    )
+
+    assert adapter.calls[0] == "summarize"
+    assert adapter.calls[-1] == "cross"
+    assert any(call.startswith("chunk:") for call in adapter.calls)
+    assert any(flag.reason == "Likely wrong word in phrase." for flag in result.flags)
